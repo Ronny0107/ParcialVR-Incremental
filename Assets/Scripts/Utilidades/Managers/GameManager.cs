@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance {get; private set;}
-    public GameStats Stats {get; private set;} = new GameStats();
+    public PlayerStatRev Stats {get; private set;} = new PlayerStatRev();
 
     void Awake()
     {
@@ -28,12 +28,32 @@ public class GameManager : MonoBehaviour
     {
         Stats.Damaged++;
     }
+    public void AddMoney(int value)
+    {
+        Stats.Money += value;
+    }
+
+    public void Pay(int price)
+    {
+        Stats.Money -= price;
+    }
+
+    public void TotalMoney(int money)
+    {
+        Stats.AllMoney += money;
+    }
 }
 
-public class GameStats
+public class PlayerStatRev
 {
     public int Fixed;
     public int Damaged;
     public int Money;
     public int AllMoney;
+}
+
+public class PlayerInitStats
+{
+    public float moveSpeed = 1f;
+    public float range;
 }

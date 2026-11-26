@@ -2,9 +2,9 @@ using UnityEngine;
 
 public enum UpgradeType
 {
-    PlayerNewTool,
     PlayerMovement,
     ConveyorSpawnRate,
+    NewObject
 
 }
 
@@ -19,6 +19,8 @@ public class Upgrades : ScriptableObject
     }
 
     public UpgradeType Type;
+    [Tooltip("Solo para NewObject: prefab que se agrega al ElementSpawner")]
+    public GameObject Unlocks;
     public string DisplayName;
     [TextArea] public string Description;
     public int BaseCost = 100;

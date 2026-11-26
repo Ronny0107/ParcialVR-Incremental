@@ -29,6 +29,8 @@ public class UpgradeNodeUI : MonoBehaviour
         Refresh();
     }
 
+    void Start() { OnEnable(); }
+
     void OnDisable()
     {
         if (subscribedTo == null) return;

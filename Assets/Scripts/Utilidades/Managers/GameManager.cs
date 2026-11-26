@@ -10,6 +10,8 @@ public class GameManager : MonoBehaviour
     public PlayerStatRev Stats {get; private set;} = new PlayerStatRev();
     ContinuousMoveProvider moveProvider;
     float baseMoveSpeed;
+    float baseSpawnTime;
+    const float MinSpawnTime = 1f;
     public bool DayEnded { get; private set; } = true;
     public event Action OnDayStarted;
     public event Action OnDayEnded;
@@ -79,6 +81,18 @@ public class GameManager : MonoBehaviour
         moveProvider.moveSpeed = baseMoveSpeed + bonus;
         Stats.movementSpeed = moveProvider.moveSpeed;
     }
+
+    // Igual que la velocidad: el valor base se queda fijo y las mejoras RESTAN tiempo.
+    public void RefreshSpawnTime()
+    {
+        if (baseSpawnTime <= 0f) baseSpawnTime = Stats.SpawnTime;
+
+        float bonus = UpgradeManager.Instance != null
+            ? UpgradeManager.Instance.GetBonus(UpgradeType.ConveyorSpawnRate)
+            : 0f;
+
+        Stats.SpawnTime = Mathf.Max(MinSpawnTime, baseSpawnTime - bonus);
+    }
 }
 
 public class PlayerStatRev
@@ -90,6 +104,7 @@ public class PlayerStatRev
     public float movementSpeed = 1f;
     public float SpawnTime = 45f;
     public float DayTime = 100f;
+    public float profit = 0f;
 }
 
 

@@ -90,23 +90,30 @@ public class UpgradeManager : MonoBehaviour
     {
         levels.Clear();
         GameManager.Instance.RefreshPlayerSpeed();
+        GameManager.Instance.RefreshSpawnTime();
         OnUpgradesReset?.Invoke();
     }
 
     void ApplyUpgrade(Upgrades data)
     {
-        // Los efectos numéricos no se acumulan aquí: cada sistema lee GetBonus(tipo).
-        // Aquí solo se refrescan los sistemas que necesitan que les empujen el valor.
+        // Los efectos numericos no se acumulan aqui: cada sistema lee GetBonus(tipo).
+        // Aqui solo se refrescan los sistemas que necesitan que les empujen el valor.
         switch (data.Type)
         {
             case UpgradeType.PlayerMovement:
                 GameManager.Instance.RefreshPlayerSpeed();
                 break;
 
-            // PlayerNewTool: habilita la herramienta consultando Has(data).
-            // ToolFixSpeed:      screw/tool.FixSpeed = base + GetBonus(UpgradeType.ToolFixSpeed)
-            // ConveyorSpawnRate: spawner.Rate        = base + GetBonus(UpgradeType.ConveyorSpawnRate)
-            // ConveyorSpeed:     conveyor.Speed      = base + GetBonus(UpgradeType.ConveyorSpeed)
+            case UpgradeType.ConveyorSpawnRate:
+                GameManager.Instance.RefreshSpawnTime();
+                break;
+
+            case UpgradeType.NewObject:
+            {
+                var spawner = FindFirstObjectByType<ElementSpawner>();
+                if (spawner != null) spawner.Desbloquear(data.Unlocks);
+                break;
+            }
         }
     }
 }

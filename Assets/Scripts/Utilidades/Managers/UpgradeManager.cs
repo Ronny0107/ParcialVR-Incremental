@@ -2,13 +2,16 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
+
 public class UpgradeManager : MonoBehaviour
 {
     public static UpgradeManager Instance {get; private set;}
-    PlayerStatRev psr;
-    readonly Dictionary<UpgradeType, int> levels = new();
+
+    // Nivel por nodo (el asset es la clave), así dos nodos del mismo tipo no se pisan.
+    readonly Dictionary<Upgrades, int> levels = new();
 
     public event Action<Upgrades> OnUpgradePurchased;
+    public event Action OnUpgradesReset;
 
     void Awake()
     {
@@ -20,9 +23,15 @@ public class UpgradeManager : MonoBehaviour
         Instance = this;
     }
 
-public int GetLevel(Upgrades data)
+    public int GetLevel(Upgrades data)
     {
-        return levels.TryGetValue(data.Type, out int lvl) ? lvl : 0;
+        return data != null && levels.TryGetValue(data, out int lvl) ? lvl : 0;
+    }
+
+    // Útil para habilitar cosas de compra única (p. ej. una herramienta nueva).
+    public bool Has(Upgrades data)
+    {
+        return GetLevel(data) > 0;
     }
 
     public bool IsMaxed(Upgrades data)
@@ -35,44 +44,69 @@ public int GetLevel(Upgrades data)
         return data.GetCost(GetLevel(data));
     }
 
+    // Un nodo está desbloqueado cuando todos sus prerrequisitos están al nivel mínimo.
+    public bool IsUnlocked(Upgrades data)
+    {
+        if (data.Requires == null) return true;
+
+        foreach (var req in data.Requires)
+        {
+            if (req == null || req.Node == null) continue;
+            if (GetLevel(req.Node) < Mathf.Max(1, req.MinLevel)) return false;
+        }
+        return true;
+    }
+
     public bool CanBuy(Upgrades data)
     {
-        return !IsMaxed(data) && psr.Money >= GetCost(data);
+        return IsUnlocked(data)
+            && !IsMaxed(data)
+            && GameManager.Instance.Stats.Money >= GetCost(data);
     }
 
     public void BuyUpgrade(Upgrades data)
     {
         if (!CanBuy(data)) return;
 
-        psr.Money -= GetCost(data);
-        levels[data.Type] = GetLevel(data) + 1;
+        GameManager.Instance.Pay(GetCost(data));
+        levels[data] = GetLevel(data) + 1;
 
         ApplyUpgrade(data);
         OnUpgradePurchased?.Invoke(data);
     }
 
+    // Bono total de un tipo: suma de (nivel x Value) de todos los nodos de ese tipo.
+    // Cada sistema consulta esto en vez de que el manager modifique sus valores.
+    public float GetBonus(UpgradeType type)
+    {
+        float total = 0f;
+        foreach (var kv in levels)
+            if (kv.Key.Type == type)
+                total += kv.Key.Value * kv.Value;
+        return total;
+    }
+
+    public void ResetAll()
+    {
+        levels.Clear();
+        GameManager.Instance.RefreshPlayerSpeed();
+        OnUpgradesReset?.Invoke();
+    }
+
     void ApplyUpgrade(Upgrades data)
     {
+        // Los efectos numéricos no se acumulan aquí: cada sistema lee GetBonus(tipo).
+        // Aquí solo se refrescan los sistemas que necesitan que les empujen el valor.
         switch (data.Type)
         {
-            case UpgradeType.PlayerNewTool:
-                // desbloquear herramienta
-                break;
             case UpgradeType.PlayerMovement:
-                // psr.MoveSpeed += data.Value;
+                GameManager.Instance.RefreshPlayerSpeed();
                 break;
-            case UpgradeType.PlayerRange:
-                // psr.Range += data.Value;
-                break;
-            case UpgradeType.ToolFixSpeed:
-                // psr.FixSpeed += data.Value;
-                break;
-            case UpgradeType.ConveyorSpawnRate:
-                // spawner.Rate += data.Value;
-                break;
-            case UpgradeType.ConveyorSpeed:
-                // conveyor.Speed += data.Value;
-                break;
+
+            // PlayerNewTool: habilita la herramienta consultando Has(data).
+            // ToolFixSpeed:      screw/tool.FixSpeed = base + GetBonus(UpgradeType.ToolFixSpeed)
+            // ConveyorSpawnRate: spawner.Rate        = base + GetBonus(UpgradeType.ConveyorSpawnRate)
+            // ConveyorSpeed:     conveyor.Speed      = base + GetBonus(UpgradeType.ConveyorSpeed)
         }
     }
 }

@@ -1,17 +1,42 @@
+using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.XR.Interaction.Toolkit.Locomotion.Movement;
 
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance {get; private set;}
     public PlayerStatRev Stats {get; private set;} = new PlayerStatRev();
-
+    ContinuousMoveProvider moveProvider;
+    float baseMoveSpeed;
+    public bool DayEnded { get; private set; } = true;
+    public event Action OnDayStarted;
+    public event Action OnDayEnded;
     void Awake()
     {
         if(Instance == null){
             Instance = this;
         }
+    }
+
+    void Start()
+    {
+        // si no la arrastras en el Inspector, la busca sola
+        if (moveProvider == null)
+            moveProvider = FindFirstObjectByType<ContinuousMoveProvider>();
+
+        if (moveProvider != null)
+            baseMoveSpeed = moveProvider.moveSpeed;
+
+        RefreshPlayerSpeed();
+    }
+
+    public void SetDayState(bool ended)
+    {
+        if (DayEnded == ended) return;
+        DayEnded = ended;
+        if (ended) OnDayEnded?.Invoke(); else OnDayStarted?.Invoke();
     }
 
     public void ChangeScene(int scene)
@@ -42,6 +67,18 @@ public class GameManager : MonoBehaviour
     {
         Stats.AllMoney += money;
     }
+
+    public void RefreshPlayerSpeed()
+    {
+        if (moveProvider == null) return;
+
+        float bonus = UpgradeManager.Instance != null
+            ? UpgradeManager.Instance.GetBonus(UpgradeType.PlayerMovement)
+            : 0f;
+
+        moveProvider.moveSpeed = baseMoveSpeed + bonus;
+        Stats.movementSpeed = moveProvider.moveSpeed;
+    }
 }
 
 public class PlayerStatRev
@@ -50,10 +87,9 @@ public class PlayerStatRev
     public int Damaged;
     public int Money;
     public int AllMoney;
+    public float movementSpeed = 1f;
+    public float SpawnTime = 45f;
+    public float DayTime = 100f;
 }
 
-public class PlayerInitStats
-{
-    public float moveSpeed = 1f;
-    public float range;
-}
+

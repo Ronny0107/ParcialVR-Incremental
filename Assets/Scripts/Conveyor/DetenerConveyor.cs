@@ -21,9 +21,8 @@ public class DetenerConveyor : MonoBehaviour
 
     float velocidadCintaOriginal;
     float velocidadTexturaOriginal;
-    float factorActual = 1f; // 1 = velocidad normal, 0 = detenida
+    float factorActual = 1f; 
 
-    int objetosDentro;
     Coroutine transicion;
 
     void Start()
@@ -39,24 +38,28 @@ public class DetenerConveyor : MonoBehaviour
 
         if (cbm != null && cbmSpeedField != null) velocidadCintaOriginal = (float)cbmSpeedField.GetValue(cbm);
         if (ato != null && atoSpeedField != null) velocidadTexturaOriginal = (float)atoSpeedField.GetValue(ato);
+
+        var gm = GameManager.Instance;
+        if (gm != null)
+        {
+            gm.OnDayEnded   += Frenar;
+            gm.OnDayStarted += Arrancar;
+
+            // estado inicial sin transicion
+            AplicarFactor(gm.DayEnded ? 0f : 1f);
+        }
     }
 
-    void OnTriggerEnter(Collider other)
+    void OnDestroy()
     {
-        // solo reaccionar a objetos con Rigidbody (los que transporta la cinta)
-        if (other.attachedRigidbody == null) return;
-
-        objetosDentro++;
-        if (objetosDentro == 1) IniciarTransicion(0f, tiempoFrenado);
+        var gm = GameManager.Instance;
+        if (gm == null) return;
+        gm.OnDayEnded   -= Frenar;
+        gm.OnDayStarted -= Arrancar;
     }
 
-    void OnTriggerExit(Collider other)
-    {
-        if (other.attachedRigidbody == null) return;
-
-        objetosDentro = Mathf.Max(0, objetosDentro - 1);
-        if (objetosDentro == 0) IniciarTransicion(1f, tiempoArranque);
-    }
+    void Frenar()   { IniciarTransicion(0f, tiempoFrenado); }
+    void Arrancar() { IniciarTransicion(1f, tiempoArranque); }
 
     void IniciarTransicion(float factorFinal, float duracion)
     {
